@@ -20,6 +20,7 @@ import java.util.List;
 import rx.Observable;
 import rx.Observer;
 import rx.Subscriber;
+import rx.functions.Func1;
 
 /**
  * Created by HuirongZhang on 2016/10/20.
@@ -52,7 +53,8 @@ public class ObservableTest extends Activity {
 
 				List<AppInfo> appInfos = new ArrayList<AppInfo>();
 				for (ResolveInfo info : infos) {
-					appInfos.add(new AppInfo("test"));
+					String name = info.activityInfo.name;
+					appInfos.add(new AppInfo(name));
 				}
 				subscriber.onNext(appInfos);
 			}
@@ -66,10 +68,10 @@ public class ObservableTest extends Activity {
 				List<ResolveInfo> infos = getPackageManager().queryIntentActivities(mainIntent, 0);
 
 				for (ResolveInfo appInfo : infos) {
-					String name = "test";
-				*//*	if (subscriber.isUnsubscribed()) {
+					String name = "check";
+					if (subscriber.isUnsubscribed()) {
 						return;
-					}*//*
+					}
 					subscriber.onNext(new AppInfo(name));
 				}
 				*//*if (!subscriber.isUnsubscribed()) {
@@ -79,25 +81,66 @@ public class ObservableTest extends Activity {
 		});*/
 	}
 
+	private List<AppInfo> getAppList() {
+		final Intent mainIntent = new Intent(Intent.ACTION_MAIN, null);
+		mainIntent.addCategory(Intent.CATEGORY_LAUNCHER);
+
+		List<ResolveInfo> infos = getPackageManager().queryIntentActivities(mainIntent, 0);
+
+		List<AppInfo> appInfos = new ArrayList<AppInfo>();
+		for (ResolveInfo info : infos) {
+			String name = info.activityInfo.name;
+			appInfos.add(new AppInfo(name));
+		}
+		return appInfos;
+	}
+
 	private void refreshTheList() {
-		getApps().subscribe(new Observer<List<AppInfo>>() {
+		/*getApps().filter(new Func1<List<AppInfo>, Boolean>() {
+			@Override
+			public Boolean call(List<AppInfo> appInfos) {
 
-					@Override
-					public void onCompleted() {
-						Toast.makeText(getActivity(), "Here is the list!", Toast.LENGTH_LONG).show();
-					}
+			}
+		}).subscribe(new Observer<List<AppInfo>>() {
 
-					@Override
-					public void onError(Throwable e) {
-						Toast.makeText(getActivity(), "Something went wrong!", Toast.LENGTH_SHORT).show();
-					}
+			@Override
+			public void onCompleted() {
+				Toast.makeText(getActivity(), "Here is the list!", Toast.LENGTH_LONG).show();
+			}
 
-					@Override
-					public void onNext(List<AppInfo> appInfos) {
-						System.out.println("onNext()");
-						mAdapter.setData(appInfos);
-					}
-				});
+			@Override
+			public void onError(Throwable e) {
+				Toast.makeText(getActivity(), "Something went wrong!", Toast.LENGTH_SHORT).show();
+			}
+
+			@Override
+			public void onNext(List<AppInfo> appInfos) {
+				System.out.println("onNext()");
+				mAdapter.setData(appInfos);
+			}
+		});*/
+
+		Observable.from(getAppList()).filter(new Func1<AppInfo, Boolean>() {
+			@Override
+			public Boolean call(AppInfo appInfo) {
+				return appInfo.getName().startsWith("com.google");
+			}
+		}).subscribe(new Observer<AppInfo>() {
+			@Override
+			public void onCompleted() {
+				Toast.makeText(getActivity(), "Here is the list!", Toast.LENGTH_LONG).show();
+			}
+
+			@Override
+			public void onError(Throwable e) {
+				Toast.makeText(getActivity(), "Something went wrong!", Toast.LENGTH_SHORT).show();
+			}
+
+			@Override
+			public void onNext(AppInfo appInfo) {
+				mAdapter.setData(appInfo);
+			}
+		});
 	}
 
 	public Context getActivity() {
@@ -107,7 +150,7 @@ public class ObservableTest extends Activity {
 	class MyAdapter extends BaseAdapter {
 		List<AppInfo> mAppInfos;
 
-		public  MyAdapter(List<AppInfo> appInfos) {
+		public MyAdapter(List<AppInfo> appInfos) {
 			mAppInfos = appInfos;
 		}
 
@@ -141,6 +184,12 @@ public class ObservableTest extends Activity {
 		public void setData(List<AppInfo> appInfos) {
 			mAppInfos.clear();
 			mAppInfos.addAll(appInfos);
+			notifyDataSetChanged();
+		}
+
+		public void setData(AppInfo appInfos) {
+			//mAppInfos.clear();
+			mAppInfos.add(appInfos);
 			notifyDataSetChanged();
 		}
 	}
